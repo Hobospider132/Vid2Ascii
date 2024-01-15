@@ -1,2 +1,9 @@
 # Vid2Ascii
-Convert video to ascii form and play it in terminal 
+
+Author: Hobospider132
+Compiled using C++ 17 
+
+# Required libraries: 
+
+- OpenCV 4.90
+
