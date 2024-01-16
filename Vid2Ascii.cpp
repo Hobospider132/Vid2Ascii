@@ -1,10 +1,3 @@
-/*
-    TODO:
-
-    [ ] Find out why log file does not get created
-    [ ] Find out why cv cap isn't working
-*/
-
 #include <iostream>
 #include <string>
 #include <regex>
@@ -27,7 +20,7 @@ public:
 
         struct tm localTime;
         if (localtime_s(&localTime, &currentTime_t) == 0) {
-            ss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+            ss << std::put_time(&localTime, "%d-%m-%Y %H,%M,%S");
         }
         else {
             // Gonna be super awkward in the logs if this happens
@@ -41,9 +34,11 @@ int main() {
     LogTime logTime;
 
     std::string time = logTime.getTime();
-    std::string fileName = time + "_log.txt";
-    std::cout << fileName;
+    std::string fileName = time + ".log";
     std::ofstream logFile(fileName);
+    std::string creationTime = logTime.getTime(); 
+    logFile << creationTime + " ";
+    logFile << "Sucessfully created log file" << std::endl;
 
     bool valid = false;
 
@@ -51,7 +46,7 @@ int main() {
 
     while (!valid) {
         std::cout << "Please provide file path to a .mp4: ";
-        std::cin >> file_path;
+        std::getline(std::cin, file_path);
 
         std::regex pattern("\\.mp4");
 
@@ -65,14 +60,15 @@ int main() {
         }
     }
     cv::VideoCapture cap(file_path);
+
     if (!cap.isOpened()) {
         std::string time = logTime.getTime();
         logFile << time + " ";
         std::cerr << "Unable to open .mp4, please check video integrity.\nPress any key to exit...";
+        logFile << "Error: unable to open file" << std::endl;
         cv::waitKey(0);
-        logFile << "Error: " + std::to_string(cv::getTickCount()) << std::endl;
         return -1;
-    }
+    } 
 
     double fps = cap.get(cv::CAP_PROP_FPS); 
 
@@ -80,10 +76,17 @@ int main() {
     std::error_code ec;
 
     if (!fs::is_directory(dir)) {
-        std::string time = logTime.getTime();
-        logFile << time + " ";
-        fs::create_directory(dir, ec);
-        logFile << "Created directory sucessfully" << std::endl;
+        try {
+            fs::create_directory(dir, ec);
+            logFile << "Created directory successfully" << std::endl;
+        }
+        catch (const std::filesystem::filesystem_error& ex) {
+            std::string time = logTime.getTime();
+            logFile << time + " ";
+            std::cerr << "Error creating directory: " << ex.what() << std::endl;
+            cv::waitKey(0);
+            return -1;
+        }
     }
 
     if(ec) {
@@ -98,13 +101,13 @@ int main() {
     cv::Mat frame;
     
     while (cap.read(frame)) {
-        cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+        cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
         std::string frameName = dir + "frame_" + std::to_string(frameNumber) + ".png";
-        cv::imwrite(frameName, frame);
+        imwrite(frameName, frame);
         frameNumber++;
     }
     
-    cap.release(); */
+    cap.release(); 
     logFile.close();
 
     return 0;
