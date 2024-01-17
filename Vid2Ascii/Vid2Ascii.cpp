@@ -3,12 +3,13 @@
 #include <regex>
 #include <filesystem>
 #include <fstream>
-#include <sstream>
+#include <opencv2/opencv.hpp>
 #include <ctime>
 #include <iomanip>
 #include <limits>
 
 namespace fs = std::filesystem;
+
 
 class LogTime {
 public:
@@ -21,7 +22,7 @@ public:
 
         struct tm localTime;
         if (localtime_s(&localTime, &currentTime_t) == 0) {
-            ss << std::put_time(&localTime, "%d-%m-%Y %H.%M.%S");
+            ss << std::put_time(&localTime, "%d-%m-%Y %H,%M,%S");
         }
         else {
             // Gonna be super awkward in the logs if this happens
@@ -34,11 +35,9 @@ public:
 int main() {
     LogTime logTime;
 
-    std::string time = logTime.getTime();
-    std::string fileName = time + ".log";
+    std::string fileName = logTime.getTime() + ".log";
     std::ofstream logFile(fileName);
-    std::string creationTime = logTime.getTime();
-    logFile << creationTime + " ";
+    logFile << logTime.getTime() + " ";
     logFile << "Sucessfully created log file" << std::endl;
 
     bool valid = false;
@@ -50,17 +49,17 @@ int main() {
         std::getline(std::cin, file_path);
 
         std::regex pattern("\\.mp4");
+        std::replace(file_path.begin(), file_path.end(), '\\', '/');
 
         if (std::regex_search(file_path, pattern) && fs::exists(file_path)) {
             valid = true;
-            std::string time = logTime.getTime();
-            logFile << time + " ";
+            logFile << logTime.getTime() + " ";
             logFile << "Valid set to true" << std::endl;
         }
         else {
             std::cout << "Invalid file path, please check that the file exists and is a mp4 file" << std::endl;
         }
-    }
+    } 
 
     std::string dir = "frames/";
     std::error_code ec;
@@ -71,24 +70,44 @@ int main() {
             logFile << "Created directory successfully" << std::endl;
         }
         catch (const std::filesystem::filesystem_error& ex) {
-            std::string time = logTime.getTime();
-            logFile << time + " ";
+            logFile << logTime.getTime() + " ";
+            logFile << "error creating directory" << std::endl;
             std::cerr << "Error creating directory: " << ex.what() << std::endl;
             std::cout << "Press any key to exit...";
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            cv::waitKey(0);
             return -1;
         }
     }
 
-    if (ec) {
-        std::string time = logTime.getTime();
-        logFile << time + " ";
-        std::cerr << "Error creating directory: " << ec.message() << std::endl;
-        std::cout << "Press any key to exit...";
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        return -1;
+    cv::VideoCapture cap;
+    cap.open("test.mp4");
+    cv::Mat frame;
+
+    double fps = cap.get(cv::CAP_PROP_FPS);
+
+    int frameNumber = 0;
+
+    while (cap.read(frame)) {
+        cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+        std::string frameName = dir + "frame_" + std::to_string(frameNumber) + ".png";
+        cv::imwrite(frameName, frame);
+        frameNumber++;
     }
 
+    if (!cap.isOpened()) {
+        logFile << logTime.getTime() + " ";
+        logFile << "Error: unable to open file" << std::endl;
+        std::cerr << "Unable to open .mp4, please check video integrity." << std::endl;
+        std::cout << "Press any key to exit...";
+        cv::waitKey(0);
+        return -1;
+    } 
+
+    std::cout << "Converted video to: " << frameNumber << "frames" << std::endl;
+    logFile << logTime.getTime() + " ";
+    logFile << "Converted" << frameNumber << "frames" << std::endl;
+
+    cap.release();
     logFile.close();
 
     return 0;
