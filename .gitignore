@@ -7,3 +7,4 @@ Vid2Ascii.sln
 Vid2Ascii/*.dll
 *.log
 *.mp4
+vid2ascii/frames/
