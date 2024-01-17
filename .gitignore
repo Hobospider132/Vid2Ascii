@@ -1,0 +1,9 @@
+x64/
+vid2Ascii/x64/
+.vs/
+Vid2Ascii/Vid2Ascii.vcxproj
+Vid2Ascii/Vid2Ascii.vcxproj.*
+Vid2Ascii.sln
+Vid2Ascii/*.dll
+*.log
+*.mp4
